@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SharkNinja (SN US) — Leading Indicator Trade Screen</title>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@700,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* ========== RESET & BASE ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#0d1117;
+  --bg-secondary:#161b22;
+  --bg-card:#1c2128;
+  --bg-card-hover:#21262d;
+  --border:#30363d;
+  --border-light:#484f58;
+  --text-primary:#e6edf3;
+  --text-secondary:#8b949e;
+  --text-muted:#6e7681;
+  --accent:#0077C8;
+  --accent-dim:#005a9e;
+  --accent-light:#b3d9f2;
+  --accent-blue:#00B4D8;
+  --accent-teal:#2dd4bf;
+  --green:#3fb950;
+  --green-dim:#238636;
+  --red:#f85149;
+  --red-dim:#da3633;
+  --amber:#d29922;
+  --amber-dim:#9e6a03;
+  --font-body:'General Sans',system-ui,-apple-system,sans-serif;
+  --font-heading:'Cabinet Grotesk','General Sans',system-ui,sans-serif;
+  --radius:8px;
+  --radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.3);
+  --transition:150ms ease;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg-primary);color:var(--text-primary);line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--font-heading);font-weight:700;line-height:1.2}
+a{color:var(--accent-blue);text-decoration:none}
+a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg-primary)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-light)}
+
+/* ========== NAVIGATION ========== */
+.nav{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 24px}
+.nav-inner{max-width:1440px;margin:0 auto;display:flex;align-items:center;gap:8px;height:52px;overflow-x:auto}
+.nav-logo{font-family:var(--font-heading);font-size:1.1rem;color:var(--accent);white-space:nowrap;margin-right:16px;display:flex;align-items:center;gap:8px}
+.nav-logo svg{width:20px;height:20px;fill:var(--accent)}
+.nav-tab{padding:8px 16px;font-size:.85rem;font-weight:500;color:var(--text-secondary);cursor:pointer;border-radius:6px;white-space:nowrap;transition:all var(--transition);border:none;background:none;font-family:var(--font-body)}
+.nav-tab:hover{color:var(--text-primary);background:var(--bg-card)}
+.nav-tab.active{color:var(--accent);background:rgba(0,119,200,.1)}
+.nav-tab .tab-num{font-size:.7rem;opacity:.5;margin-right:4px}
+
+/* ========== LAYOUT ========== */
+.main{max-width:1440px;margin:0 auto;padding:24px}
+.section{display:none;animation:fadeIn .3s ease}
+.section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ========== HEADER BAR ========== */
+.header-bar{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:24px;flex-wrap:wrap}
+.header-bar .stock-name{font-family:var(--font-heading);font-size:1.4rem;color:var(--accent)}
+.header-bar .stock-price{font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+.header-bar .stock-change{font-size:.9rem;font-weight:600;padding:3px 10px;border-radius:4px}
+.header-bar .stock-change.up{background:rgba(63,185,80,.15);color:var(--green)}
+.header-bar .stock-change.down{background:rgba(248,81,73,.15);color:var(--red)}
+.header-bar .meta{font-size:.8rem;color:var(--text-secondary)}
+.header-bar .meta strong{color:var(--text-primary)}
+.header-bar .signal-badge{font-size:.75rem;font-weight:700;padding:4px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.signal-strong{background:rgba(63,185,80,.15);color:var(--green)}
+.signal-neutral{background:rgba(210,153,34,.15);color:var(--amber)}
+.signal-weak{background:rgba(248,81,73,.15);color:var(--red)}
+
+/* ========== CARDS ========== */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;transition:border-color var(--transition)}
+.card:hover{border-color:var(--border-light)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-family:var(--font-heading);font-size:1.1rem;color:var(--text-primary)}
+.card-badge{font-size:.7rem;padding:3px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-blue{background:rgba(0,119,200,.15);color:var(--accent)}
+.badge-teal{background:rgba(0,180,216,.15);color:var(--accent-blue)}
+.badge-green{background:rgba(63,185,80,.15);color:var(--green)}
+.badge-red{background:rgba(248,81,73,.15);color:var(--red)}
+.badge-amber{background:rgba(210,153,34,.15);color:var(--amber)}
+
+/* ========== GRID ========== */
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+@media(max-width:1200px){.grid-4,.grid-5,.grid-6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.grid-2,.grid-3,.grid-4,.grid-5,.grid-6{grid-template-columns:1fr}}
+@media(max-width:768px){.nav-tab{padding:6px 10px;font-size:.8rem}}
+
+/* ========== SECTION HEADERS ========== */
+.section-header{margin-bottom:24px}
+.section-header h2{font-size:1.8rem;color:var(--text-primary);margin-bottom:4px}
+.section-header p{color:var(--text-secondary);font-size:.95rem}
+.subsection{margin-bottom:32px}
+.subsection-title{font-family:var(--font-heading);font-size:1.25rem;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.subsection-title::before{content:'';display:inline-block;width:4px;height:20px;background:var(--accent);border-radius:2px}
+
+/* ========== METRIC CARDS ========== */
+.metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all .2s ease}
+.metric-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.metric-card h4{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.metric-card .metric-value{font-size:1.5rem;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
+.metric-card .metric-sub{font-size:.8rem;color:var(--text-secondary);margin-top:4px}
+.metric-card .metric-delta{font-size:.8rem;font-weight:600;margin-top:4px}
+.metric-delta.up{color:var(--green)}
+.metric-delta.down{color:var(--red)}
+.metric-delta.flat{color:var(--amber)}
+
+/* ========== SIGNAL CARDS ========== */
+.signal-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden}
+.signal-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:2px 0 0 2px}
+.signal-card.sig-green::before{background:var(--green)}
+.signal-card.sig-amber::before{background:var(--amber)}
+.signal-card.sig-red::before{background:var(--red)}
+.signal-card .sig-label{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.signal-card .sig-value{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums}
+.signal-card .sig-status{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:8px;padding:3px 8px;border-radius:4px;display:inline-block}
+
+/* ========== TABLES ========== */
+.data-table{width:100%;border-collapse:collapse;font-size:.8rem;font-variant-numeric:tabular-nums}
+.data-table th{background:var(--bg-secondary);color:var(--text-secondary);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.data-table tr:hover td{background:var(--bg-card-hover)}
+.data-table .positive{color:var(--green)}
+.data-table .negative{color:var(--red)}
+.tone-green{background:rgba(63,185,80,.15);color:var(--green);padding:2px 8px;border-radius:4px;font-weight:600;font-size:.75rem}
+.tone-amber{background:rgba(210,153,34,.15);color:var(--amber);padding:2px 8px;border-radius:4px;font-weight:600;font-size:.75rem}
+.tone-red{background:rgba(248,81,73,.15);color:var(--red);padding:2px 8px;border-radius:4px;font-weight:600;font-size:.75rem}
+
+/* ========== CHART CONTAINERS ========== */
+.chart-container{position:relative;width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.chart-container canvas{width:100%!important}
+.chart-container h3{font-family:var(--font-heading);font-size:1rem;color:var(--text-primary);margin-bottom:12px}
+.chart-tall{min-height:350px}
+
+/* ========== VALUE CHAIN ========== */
+.value-chain{display:flex;align-items:center;gap:0;overflow-x:auto;padding:20px 0}
+.chain-step{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;min-width:140px;text-align:center;transition:all .2s ease;flex-shrink:0}
+.chain-step:hover{border-color:var(--accent);transform:translateY(-3px)}
+.chain-step .step-icon{font-size:1.5rem;margin-bottom:8px}
+.chain-step .step-name{font-weight:600;font-size:.85rem;margin-bottom:4px}
+.chain-step .step-detail{font-size:.7rem;color:var(--text-secondary)}
+.chain-arrow{color:var(--text-muted);font-size:1.2rem;flex-shrink:0;padding:0 4px}
+
+/* ========== TIMELINE ========== */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:12px;top:0;bottom:0;width:2px;background:var(--border)}
+.timeline-item{position:relative;margin-bottom:24px;padding-left:16px}
+.timeline-item::before{content:'';position:absolute;left:-24px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
+.timeline-item.type-earnings::before{background:var(--green)}
+.timeline-item.type-product::before{background:var(--accent-blue)}
+.timeline-item.type-retail::before{background:var(--amber)}
+.timeline-item.type-tariff::before{background:var(--red)}
+.timeline-item.type-international::before{background:var(--accent-teal)}
+.timeline-item.type-catalyst::before{background:#a371f7}
+.timeline-date{font-size:.75rem;color:var(--accent);font-weight:600;margin-bottom:4px}
+.timeline-content{font-size:.85rem;color:var(--text-secondary);line-height:1.6}
+
+/* ========== THESIS CARDS ========== */
+.thesis-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border-bottom:1px solid var(--border)}
+.thesis-item:last-child{border-bottom:none}
+.thesis-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0}
+.thesis-num.bull{background:rgba(63,185,80,.15);color:var(--green)}
+.thesis-num.bear{background:rgba(248,81,73,.15);color:var(--red)}
+.thesis-text{font-size:.85rem;line-height:1.5}
+.thesis-text strong{color:var(--text-primary)}
+
+/* ========== SCORE GAUGE ========== */
+.score-ring{position:relative;width:120px;height:120px;margin:0 auto}
+.score-ring svg{width:120px;height:120px;transform:rotate(-90deg)}
+.score-ring .bg{fill:none;stroke:var(--border);stroke-width:8}
+.score-ring .fg{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.score-ring .score-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.score-ring .score-num{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums;display:block}
+.score-ring .score-text{font-size:.65rem;color:var(--text-secondary);text-transform:uppercase}
+
+/* ========== PROGRESS BARS ========== */
+.progress-bar-container{margin-bottom:12px}
+.progress-bar-label{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px}
+.progress-bar-label span:first-child{color:var(--text-primary);font-weight:500}
+.progress-bar-label span:last-child{color:var(--text-secondary)}
+.progress-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-bar .fill{height:100%;border-radius:4px;transition:width .5s ease}
+
+/* ========== STATUS DOTS ========== */
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-dot.green{background:var(--green)}
+.status-dot.amber{background:var(--amber)}
+.status-dot.red{background:var(--red)}
+
+/* ========== CALLOUT BOX ========== */
+.callout{background:rgba(0,119,200,.08);border:1px solid rgba(0,119,200,.3);border-radius:var(--radius);padding:16px;margin:16px 0;font-size:.85rem;line-height:1.6;color:var(--text-secondary)}
+.callout strong{color:var(--accent)}
+.callout.callout-warn{background:rgba(210,153,34,.08);border-color:rgba(210,153,34,.3)}
+.callout.callout-warn strong{color:var(--amber)}
+.callout.callout-danger{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3)}
+.callout.callout-danger strong{color:var(--red)}
+
+/* ========== LOADING & FOOTER ========== */
+.loading{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:.8rem;padding:12px}
+.loading::before{content:'';width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;padding:32px 24px;color:var(--text-muted);font-size:.75rem;border-top:1px solid var(--border);margin-top:48px}
+</style>
+</head>
+<body>
+
+<!-- ========== NAVIGATION ========== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      SN Trade Screen
+    </div>
+    <button class="nav-tab active" data-tab="sn101"><span class="tab-num">01</span> SN 101</button>
+    <button class="nav-tab" data-tab="viral"><span class="tab-num">02</span> Viral Cycle</button>
+    <button class="nav-tab" data-tab="sellthrough"><span class="tab-num">03</span> Sell-Through</button>
+    <button class="nav-tab" data-tab="inventory"><span class="tab-num">04</span> Inventory & Channel</button>
+    <button class="nav-tab" data-tab="tariff"><span class="tab-num">05</span> Tariff & Cost</button>
+    <button class="nav-tab" data-tab="international"><span class="tab-num">06</span> International</button>
+    <button class="nav-tab" data-tab="thesis"><span class="tab-num">07</span> Thesis & Tripwires</button>
+  </div>
+</nav>
+
+<!-- ========== HEADER BAR ========== -->
+<div class="main">
+  <div class="header-bar">
+    <div class="stock-name">SharkNinja, Inc. (SN US)</div>
+    <div class="stock-price" id="live-price">$--</div>
+    <div class="stock-change" id="live-change">--</div>
+    <div class="meta">Mkt Cap: <strong id="live-mcap">$17.7B</strong></div>
+    <div class="meta">Next Earnings: <strong id="next-earnings">May 7, 2026</strong></div>
+    <div class="meta">52W Range: <strong>$60.78 – $137.65</strong></div>
+    <div class="signal-badge signal-neutral" id="composite-signal">COMPOSITE: --</div>
+    <div class="meta" style="margin-left:auto;font-size:.7rem" id="last-updated">Loading...</div>
+  </div>
+
+<!-- ====================================================================== -->
+<!-- TAB 1: SN 101                                                          -->
+<!-- ====================================================================== -->
+<div id="sn101" class="section active">
+  <div class="section-header"><h2>SN 101</h2><p>Company overview, financials, and business model</p></div>
+
+  <div class="grid-6 subsection">
+    <div class="metric-card"><h4>FY25 Revenue</h4><div class="metric-value">$6.40B</div><div class="metric-delta up">+15.7% YoY</div></div>
+    <div class="metric-card"><h4>Adj. Gross Margin</h4><div class="metric-value">49.4%</div><div class="metric-delta up">+110bps YoY</div></div>
+    <div class="metric-card"><h4>Adj. EBITDA</h4><div class="metric-value">$1.14B</div><div class="metric-delta up">17.7% margin</div></div>
+    <div class="metric-card"><h4>Net Debt / EBITDA</h4><div class="metric-value">0.03x</div><div class="metric-sub">Fortress balance sheet</div></div>
+    <div class="metric-card"><h4>Intl Revenue %</h4><div class="metric-value">33%</div><div class="metric-delta up">Target: 50%</div></div>
+    <div class="metric-card"><h4>Patent Portfolio</h4><div class="metric-value">5,500+</div><div class="metric-sub">~25 new products/yr</div></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Revenue by Category (FY25)</div>
+    <div class="grid-2">
+      <div class="chart-container"><canvas id="chart-segment"></canvas></div>
+      <div class="card">
+        <table class="data-table">
+          <thead><tr><th>Category</th><th>% Share</th><th>Key Products</th><th>Trend</th></tr></thead>
+          <tbody>
+            <tr><td>Cleaning &amp; Org</td><td>35%</td><td>Navigator, Detect Pro, robot vacs</td><td class="positive">Steady</td></tr>
+            <tr><td>Cooking &amp; Bev</td><td>30%</td><td>Luxe Cafe, SLUSHi Max, air fryers</td><td class="positive">Growing</td></tr>
+            <tr><td>Food Preparation</td><td>20%</td><td>Creami, blenders, food processors</td><td class="positive">Strong</td></tr>
+            <tr><td>Beauty</td><td>12%</td><td>CryoGlow, FlexStyle, FacialPro</td><td class="positive">+63% Q4</td></tr>
+            <tr><td>Other</td><td>3%</td><td>Woodfire, Fireside360, accessories</td><td class="positive">Expanding</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Revenue by Geography</div>
+    <div class="grid-2">
+      <div class="chart-container"><canvas id="chart-geo"></canvas></div>
+      <div class="card">
+        <table class="data-table">
+          <thead><tr><th>Region</th><th>FY25</th><th>Growth</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Domestic (US &amp; CA)</td><td>$4.30B</td><td class="positive">+15.7%</td><td>67% of total; WMT, AMZN, COST = 43-46%</td></tr>
+            <tr><td>International</td><td>$2.09B</td><td class="positive">+21.4%</td><td>33%; UK largest (~$958M)</td></tr>
+          </tbody>
+        </table>
+        <div class="callout" style="margin-top:12px"><strong>Key insight:</strong> International TAM is $97B with only 2% penetration. UK scaled from $50M (2014) to ~$1B. Germany, France, LatAm next. Long-term goal: 50/50 split.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Consensus Estimates (Goldman Sachs, Feb 2026)</div>
+    <div class="card" id="consensus-table-container"></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Wall Street Analyst Targets</div>
+    <div class="card" id="analyst-table-container"></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Business Model: The Innovation Flywheel</div>
+    <div class="value-chain">
+      <div class="chain-step"><div class="step-icon">&#128300;</div><div class="step-name">R&amp;D</div><div class="step-detail">1,000+ engineers, 24/7</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#127981;</div><div class="step-name">Contract Mfg</div><div class="step-detail">SE Asia (90%+)</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#128241;</div><div class="step-name">Social Seeding</div><div class="step-detail">TikTok, IG virality</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#128722;</div><div class="step-name">Retail</div><div class="step-detail">AMZN, WMT, COST</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#128230;</div><div class="step-name">SKU Expansion</div><div class="step-detail">5-7 month cycles</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#127758;</div><div class="step-name">International</div><div class="step-detail">12-18 month lag</div></div>
+      <div class="chain-arrow">&#8594;</div>
+      <div class="chain-step"><div class="step-icon">&#128260;</div><div class="step-name">Repeat</div><div class="step-detail">Next category cycle</div></div>
+    </div>
+    <div class="callout callout-warn"><strong>The engine only works if Step 1 keeps producing viral hits.</strong> Without new category creation, SN becomes a mature appliance company growing at GDP. 26% of sales from products &lt;3 years old.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Key Dates &amp; Catalysts</div>
+    <div class="card"><div class="timeline" id="timeline-container"></div></div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 2: VIRAL CYCLE TRACKER                                             -->
+<!-- ====================================================================== -->
+<div id="viral" class="section">
+  <div class="section-header"><h2>Viral Cycle Tracker</h2><p>Product innovation pipeline &amp; social media virality — THE key driver</p></div>
+
+  <div class="grid-3 subsection">
+    <div class="signal-card sig-green" id="sig-viral-cycles"><div class="sig-label">Active Viral Cycles</div><div class="sig-value">3</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Luxe Cafe, CryoGlow, FlexStyle</div></div>
+    <div class="signal-card sig-green" id="sig-search-momentum"><div class="sig-label">New Product Search Momentum</div><div class="sig-value">72/100</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div></div>
+    <div class="signal-card sig-green" id="sig-innovation"><div class="sig-label">Innovation Pipeline</div><div class="sig-value">HIGH</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">AI products launching H2 2026</div></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Product Lifecycle Curves (Google Trends, 12M)</div>
+    <div class="chart-container chart-tall"><canvas id="chart-lifecycle"></canvas></div>
+    <div class="callout"><strong>Critical question:</strong> Is a new S-curve starting before the old ones flatten? If all curves decline simultaneously with no replacement, the growth model is broken.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Social Media Mention Velocity (Monthly)</div>
+    <div class="chart-container chart-tall"><canvas id="chart-social"></canvas></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Patent Filing Tracker (Cumulative by Category)</div>
+    <div class="grid-2">
+      <div class="chart-container chart-tall"><canvas id="chart-patents"></canvas></div>
+      <div class="card">
+        <h3 style="font-family:var(--font-heading);margin-bottom:12px">New Product Launch Cadence</h3>
+        <table class="data-table">
+          <thead><tr><th>Quarter</th><th>Launches</th><th>Notable Products</th></tr></thead>
+          <tbody>
+            <tr><td>Q1 FY2024</td><td>6</td><td>Ninja Woodfire expansion</td></tr>
+            <tr><td>Q2 FY2024</td><td>7</td><td>Detect Pro, FlexStyle 2.0</td></tr>
+            <tr><td>Q3 FY2024</td><td>5</td><td>Luxe Cafe announced</td></tr>
+            <tr><td>Q4 FY2024</td><td>7</td><td>CryoGlow, SLUSHi Max</td></tr>
+            <tr><td>Q1 FY2025</td><td>6</td><td>Luxe Cafe launch</td></tr>
+            <tr><td>Q2 FY2025</td><td>8</td><td>FacialPro, SilkiPro</td></tr>
+            <tr><td>Q3 FY2025</td><td>5</td><td>Outdoor expansion</td></tr>
+            <tr><td>Q4 FY2025</td><td>8</td><td>AI products teased, 2 new cats</td></tr>
+          </tbody>
+        </table>
+        <div class="callout" style="margin-top:12px"><strong>~25 new products/year</strong> with 5-7 month iteration cycles vs 2-3 years for Dyson/Breville.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 3: SELL-THROUGH PULSE                                              -->
+<!-- ====================================================================== -->
+<div id="sellthrough" class="section">
+  <div class="section-header"><h2>Sell-Through Pulse</h2><p>Real-time demand via Amazon, Google Trends, consumer proxies</p></div>
+
+  <div class="grid-4 subsection" style="align-items:start">
+    <div class="card" style="text-align:center">
+      <h3 style="font-family:var(--font-heading);margin-bottom:12px">Demand Score</h3>
+      <div class="score-ring"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" id="demand-score-ring" cx="60" cy="60" r="50" stroke="var(--green)" stroke-dasharray="314.16" stroke-dashoffset="94"/></svg><div class="score-label"><span class="score-num" id="demand-score-num">70</span><span class="score-text">Demand</span></div></div>
+    </div>
+    <div class="signal-card sig-green" id="sig-google-search"><div class="sig-label">Google Search Momentum</div><div class="sig-value">68/100</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div></div>
+    <div class="signal-card sig-green" id="sig-amazon-demand"><div class="sig-label">Amazon Demand Signal</div><div class="sig-value">BSR #1-5</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div></div>
+    <div class="signal-card sig-amber" id="sig-consumer-confidence"><div class="sig-label">Consumer Confidence</div><div class="sig-value" id="cci-value">64.7</div><div class="sig-status" style="background:rgba(210,153,34,.15);color:var(--amber)">NEUTRAL</div></div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Google Trends — Core Brands (12M)</div><div class="chart-container chart-tall"><canvas id="chart-trends-core"></canvas></div></div>
+  <div class="subsection"><div class="subsection-title">Google Trends — New vs Legacy Products (12M)</div><div class="chart-container chart-tall"><canvas id="chart-trends-new-legacy"></canvas></div></div>
+
+  <div class="grid-2 subsection">
+    <div class="chart-container chart-tall"><h3>Amazon BSR — Key SKUs</h3><canvas id="chart-amazon-bsr"></canvas></div>
+    <div class="chart-container chart-tall"><h3>Amazon Average Selling Price</h3><canvas id="chart-amazon-pricing"></canvas></div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Consumer Health Dashboard</div><div class="chart-container chart-tall"><canvas id="chart-consumer-health"></canvas></div></div>
+
+  <div class="subsection"><div class="subsection-title">Retailer Commentary Heatmap</div><div class="card" id="retailer-commentary-container"></div></div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 4: INVENTORY & CHANNEL                                             -->
+<!-- ====================================================================== -->
+<div id="inventory" class="section">
+  <div class="section-header"><h2>Inventory &amp; Channel Health</h2><p>When demand softens, inventory builds. When inventory builds, markdowns follow. When markdowns happen, margins get crushed.</p></div>
+
+  <div class="grid-3 subsection">
+    <div class="signal-card sig-green"><div class="sig-label">Inventory / COGS Ratio</div><div class="sig-value">27.5%</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">HEALTHY</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Tripwire: &gt;35%</div></div>
+    <div class="signal-card sig-green"><div class="sig-label">Markdown Activity</div><div class="sig-value">LOW</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">HEALTHY</div></div>
+    <div class="signal-card sig-green"><div class="sig-label">Days Inventory Outstanding</div><div class="sig-value">107</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STABLE</div></div>
+  </div>
+
+  <div class="grid-2 subsection">
+    <div class="chart-container chart-tall"><h3>Inventory / TTM COGS Ratio</h3><canvas id="chart-inv-cogs"></canvas></div>
+    <div class="chart-container chart-tall"><h3>Inventory Growth vs Revenue Growth</h3><canvas id="chart-inv-vs-rev"></canvas></div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Gross Margin Bridge (FY24 to FY25)</div><div class="chart-container chart-tall"><canvas id="chart-margin-bridge"></canvas></div></div>
+
+  <div class="grid-2 subsection">
+    <div class="chart-container chart-tall"><h3>Amazon Deal Frequency</h3><canvas id="chart-deal-freq"></canvas></div>
+    <div class="chart-container chart-tall"><h3>Channel Mix</h3><canvas id="chart-channel-mix"></canvas></div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 5: TARIFF & COST                                                   -->
+<!-- ====================================================================== -->
+<div id="tariff" class="section">
+  <div class="section-header"><h2>Tariff &amp; Cost Structure</h2><p>90%+ of US production now outside China — supply chain diversification largely complete</p></div>
+
+  <div class="grid-3 subsection">
+    <div class="signal-card sig-green"><div class="sig-label">Effective Tariff Rate</div><div class="sig-value">19-20%</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">MITIGATED</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Down from 30-55% (China)</div></div>
+    <div class="signal-card sig-amber"><div class="sig-label">Shipping Cost (Asia-US)</div><div class="sig-value" id="shipping-rate">--</div><div class="sig-status" style="background:rgba(210,153,34,.15);color:var(--amber)">MONITORING</div></div>
+    <div class="signal-card sig-green"><div class="sig-label">USD/CNY Rate</div><div class="sig-value" id="fx-usdcny">--</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">FAVORABLE</div></div>
+  </div>
+
+  <div class="grid-2 subsection">
+    <div class="chart-container chart-tall"><h3>Container Shipping Rates</h3><canvas id="chart-shipping"></canvas></div>
+    <div class="chart-container chart-tall"><h3>USD/CNY Exchange Rate (6M)</h3><canvas id="chart-usdcny"></canvas></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Supply Chain Diversification</div>
+    <div class="grid-2">
+      <div class="card" id="supply-chain-bars"></div>
+      <div class="card">
+        <div class="callout"><strong>SN has largely completed diversification.</strong> 90%+ of US production outside China (Vietnam, Thailand, Indonesia, Malaysia, Cambodia). Cost parity achieved mid-2025. 1,500+ tariff-mitigation initiatives executed.</div>
+        <div class="callout callout-warn" style="margin-top:8px"><strong>Upside:</strong> Supreme Court rulings could eliminate emergency duties, removing 19-20% tariff entirely.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">US-China Tariff Timeline</div>
+    <div class="card"><div class="timeline">
+      <div class="timeline-item type-tariff"><div class="timeline-date">2018</div><div class="timeline-content">Section 301 tariffs on China. SN 100% exposed.</div></div>
+      <div class="timeline-item type-catalyst"><div class="timeline-date">2019</div><div class="timeline-content">SN begins systematic diversification to SE Asia. Initial 15% cost premium.</div></div>
+      <div class="timeline-item type-tariff"><div class="timeline-date">2020-2023</div><div class="timeline-content">Progressive shift: 40+ China factories reduced. Vietnam, Thailand, Indonesia ramped.</div></div>
+      <div class="timeline-item type-catalyst"><div class="timeline-date">Mid-2025</div><div class="timeline-content">Cost parity achieved. 90%+ outside China. Rate drops from 30-55% to 19-20%.</div></div>
+      <div class="timeline-item type-tariff"><div class="timeline-date">Q1-Q2 2026</div><div class="timeline-content">Remaining headwind: ~120bps GM Q1, ~100bps Q2. Improving in 2H.</div></div>
+      <div class="timeline-item type-catalyst"><div class="timeline-date">Jul 2026</div><div class="timeline-content">USTR Section 301 annual review.</div></div>
+    </div></div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Commodity Input Costs (6M)</div><div class="chart-container chart-tall"><canvas id="chart-commodities"></canvas></div></div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 6: INTERNATIONAL                                                   -->
+<!-- ====================================================================== -->
+<div id="international" class="section">
+  <div class="section-header"><h2>International Expansion</h2><p>Bull case requires growth toward 50% of revenue. Currently 33% with 2% penetration in $97B TAM.</p></div>
+
+  <div class="grid-3 subsection">
+    <div class="signal-card sig-green"><div class="sig-label">Intl Revenue Share</div><div class="sig-value">33%</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">GROWING</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Target: 50%</div></div>
+    <div class="signal-card sig-green"><div class="sig-label">Intl Growth Rate</div><div class="sig-value">+21.4%</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">STRONG</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Tripwire: &lt;15%</div></div>
+    <div class="signal-card sig-green"><div class="sig-label">Direct Market Transitions</div><div class="sig-value">4 in TTM</div><div class="sig-status" style="background:rgba(63,185,80,.15);color:var(--green)">EXPANDING</div><div style="font-size:.75rem;color:var(--text-secondary);margin-top:6px">Nordics, Poland, Benelux done</div></div>
+  </div>
+
+  <div class="grid-2 subsection">
+    <div class="chart-container chart-tall"><h3>International Revenue Share</h3><canvas id="chart-intl-share"></canvas></div>
+    <div class="chart-container chart-tall"><h3>Intl vs Domestic Growth</h3><canvas id="chart-intl-vs-domestic"></canvas></div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Google Trends — International Markets (12M)</div><div class="chart-container chart-tall"><canvas id="chart-intl-trends"></canvas></div></div>
+
+  <div class="subsection">
+    <div class="subsection-title">Amazon Marketplace Presence</div>
+    <div class="card"><table class="data-table">
+      <thead><tr><th>Market</th><th>Status</th><th>Key Category</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>US</td><td><span class="tone-green">Dominant</span></td><td>Air Fryer BSR #1</td><td>67% of revenue</td></tr>
+        <tr><td>UK</td><td><span class="tone-green">Strong</span></td><td>Vacuum Top 3</td><td>~$958M, largest intl market</td></tr>
+        <tr><td>Germany</td><td><span class="tone-amber">Growing</span></td><td>Kitchen expanding</td><td>3-year growth runway</td></tr>
+        <tr><td>France</td><td><span class="tone-amber">Growing</span></td><td>Floor care entry</td><td>Direct transition H1 2026</td></tr>
+        <tr><td>Italy</td><td><span class="tone-amber">Early</span></td><td>Kitchen focus</td><td>Direct transition H1 2026</td></tr>
+        <tr><td>Spain</td><td><span class="tone-amber">Early</span></td><td>Kitchen focus</td><td>Direct transition H1 2026</td></tr>
+        <tr><td>Japan</td><td><span class="tone-amber">Early</span></td><td>Kitchen niche</td><td>Strong local incumbents</td></tr>
+        <tr><td>Australia</td><td><span class="tone-green">Growing</span></td><td>Floor care, kitchen</td><td>UK playbook replication</td></tr>
+        <tr><td>Mexico</td><td><span class="tone-green">Triple-digit</span></td><td>Full range</td><td>LatAm beachhead</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Competitor Landscape by Market</div>
+    <div class="card"><table class="data-table">
+      <thead><tr><th>Market</th><th>Dyson</th><th>Breville/DeLonghi</th><th>Local Brands</th><th>SN Position</th></tr></thead>
+      <tbody>
+        <tr><td>US</td><td><span class="tone-amber">Strong</span></td><td><span class="tone-amber">Moderate</span></td><td><span class="tone-green">Weak</span></td><td><span class="tone-green">Dominant</span></td></tr>
+        <tr><td>UK</td><td><span class="tone-red">Dominant</span></td><td><span class="tone-amber">Moderate</span></td><td><span class="tone-amber">Moderate</span></td><td><span class="tone-green">Strong #2</span></td></tr>
+        <tr><td>Germany</td><td><span class="tone-red">Strong</span></td><td><span class="tone-green">Weak</span></td><td><span class="tone-red">V. Strong (Bosch)</span></td><td><span class="tone-amber">Early</span></td></tr>
+        <tr><td>France</td><td><span class="tone-amber">Strong</span></td><td><span class="tone-amber">SEB/Moulinex</span></td><td><span class="tone-red">Strong</span></td><td><span class="tone-amber">Early</span></td></tr>
+        <tr><td>Japan</td><td><span class="tone-red">Strong</span></td><td><span class="tone-green">Weak</span></td><td><span class="tone-red">V. Strong</span></td><td><span class="tone-red">Very Early</span></td></tr>
+        <tr><td>Australia</td><td><span class="tone-red">Strong</span></td><td><span class="tone-red">Strong</span></td><td><span class="tone-green">Weak</span></td><td><span class="tone-amber">Growing</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- TAB 7: THESIS & TRIPWIRES                                              -->
+<!-- ====================================================================== -->
+<div id="thesis" class="section">
+  <div class="section-header"><h2>Thesis &amp; Tripwires</h2><p>Decision-making tab — is the bull case intact or breaking?</p></div>
+
+  <div class="subsection">
+    <div class="subsection-title">Composite Score Breakdown</div>
+    <div class="grid-2" style="align-items:start">
+      <div class="card" style="text-align:center">
+        <h3 style="font-family:var(--font-heading);margin-bottom:16px">Overall Composite</h3>
+        <div class="score-ring" style="width:160px;height:160px;margin:0 auto"><svg viewBox="0 0 160 160" style="width:160px;height:160px"><circle class="bg" cx="80" cy="80" r="68"/><circle class="fg" id="composite-ring" cx="80" cy="80" r="68" stroke="var(--green)" stroke-dasharray="427.26" stroke-dashoffset="128"/></svg><div class="score-label"><span class="score-num" id="composite-score-num" style="font-size:2.4rem">70</span><span class="score-text">Composite</span></div></div>
+      </div>
+      <div class="card" id="score-breakdown-table"></div>
+    </div>
+  </div>
+
+  <div class="grid-2 subsection">
+    <div class="card">
+      <div class="card-header"><div class="card-title" style="color:var(--green)">Bull Case</div><span class="card-badge badge-green">5 Arguments</span></div>
+      <div class="thesis-item"><div class="thesis-num bull">1</div><div class="thesis-text"><strong>Category creation engine:</strong> Proven viral product launches (Creami, FlexStyle, Luxe Cafe, CryoGlow). 26% of sales from products &lt;3 years old. AI products H2 2026.</div></div>
+      <div class="thesis-item"><div class="thesis-num bull">2</div><div class="thesis-text"><strong>International runway:</strong> 2% penetration in $97B TAM. UK scaled $50M to ~$1B. Germany, France, LatAm next. Target: 50% of revenue.</div></div>
+      <div class="thesis-item"><div class="thesis-num bull">3</div><div class="thesis-text"><strong>Margin expansion:</strong> DTC re-platforming + operating leverage. GM 49.4% vs Whirlpool 16%. Incremental EBITDA margins 35-40%.</div></div>
+      <div class="thesis-item"><div class="thesis-num bull">4</div><div class="thesis-text"><strong>Innovation speed:</strong> 5-7 month cycles vs 2-3 years for Dyson. 1,000+ engineers, 5,500+ patents. 23-74% below premium pricing.</div></div>
+      <div class="thesis-item"><div class="thesis-num bull">5</div><div class="thesis-text"><strong>Capital allocation:</strong> $750M buyback (Feb 2026). FCF $465M FY25. Net debt/EBITDA 0.03x.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title" style="color:var(--red)">Bear Case</div><span class="card-badge badge-red">6 Arguments</span></div>
+      <div class="thesis-item"><div class="thesis-num bear">1</div><div class="thesis-text"><strong>No recurring revenue:</strong> Every quarter starts from zero. One bad product cycle = immediate deceleration.</div></div>
+      <div class="thesis-item"><div class="thesis-num bear">2</div><div class="thesis-text"><strong>Chinese copycats:</strong> Dreame, Roborock replicating at lower prices. Amazon Basics/Kirkland private label risk.</div></div>
+      <div class="thesis-item"><div class="thesis-num bear">3</div><div class="thesis-text"><strong>Tariff residual:</strong> 19-20% SE Asia tariffs still compress margins ~120bps. Worst-case: EBITDA drops to $1.19B.</div></div>
+      <div class="thesis-item"><div class="thesis-num bear">4</div><div class="thesis-text"><strong>Retail concentration:</strong> WMT, AMZN, COST = 43-46% of sales. WMT underperformed holiday 2025.</div></div>
+      <div class="thesis-item"><div class="thesis-num bear">5</div><div class="thesis-text"><strong>Key-man risk:</strong> CEO Barrocas approves all product decisions. Chairman Wang controls 43% voting power.</div></div>
+      <div class="thesis-item"><div class="thesis-num bear">6</div><div class="thesis-text"><strong>Discretionary exposure:</strong> $50-$300 deferrable products. Appliance market declined 14% (2022) + 11% (2023) during inflation.</div></div>
+    </div>
+  </div>
+
+  <div class="subsection"><div class="subsection-title">Tripwire Checklist (Kill Signals)</div><div class="card" id="tripwire-table-container"></div></div>
+
+  <div class="subsection">
+    <div class="subsection-title">Key Monitoring Checklist</div>
+    <div class="card"><table class="data-table">
+      <thead><tr><th>#</th><th>Monitoring Item</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Q-on-Q organic growth trajectory</td><td>SN earnings, Tab 1</td></tr>
+        <tr><td>2</td><td>Gross margin bridge (tariff vs mix vs pricing vs FX)</td><td>SN 10-Q, Tab 4</td></tr>
+        <tr><td>3</td><td>New product pipeline commentary</td><td>Earnings call, Tab 2</td></tr>
+        <tr><td>4</td><td>Retailer read-across (WMT/TGT/AMZN on small appliances)</td><td>Retailer earnings, Tab 3</td></tr>
+        <tr><td>5</td><td>Social media momentum for new SN products</td><td>Google Trends, Tab 2</td></tr>
+        <tr><td>6</td><td>International market-specific commentary</td><td>SN earnings, Tab 6</td></tr>
+        <tr><td>7</td><td>Tariff policy evolution</td><td>USTR, Tab 5</td></tr>
+        <tr><td>8</td><td>Competitive moves (Dyson, Amazon Basics, Kirkland)</td><td>Industry, Tab 6</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<div class="footer">SharkNinja (SN US) Leading Indicator Trade Screen &mdash; Data auto-updates via GitHub Actions. Quarterly data requires manual 10-Q update.<br>Not investment advice. For research purposes only.</div>
+</div>
+
+<script>
+// ========== TAB NAVIGATION ==========
+const tabs=document.querySelectorAll('.nav-tab'),sections=document.querySelectorAll('.section');
+const tabRenderMap={sn101:renderSN101Charts,viral:renderViralCharts,sellthrough:renderSellThroughCharts,inventory:renderInventoryCharts,tariff:renderTariffCharts,international:renderInternationalCharts,thesis:renderThesisCharts};
+tabs.forEach(tab=>{tab.addEventListener('click',()=>{tabs.forEach(t=>t.classList.remove('active'));sections.forEach(s=>s.classList.remove('active'));tab.classList.add('active');const target=tab.dataset.tab;document.getElementById(target).classList.add('active');if(tabRenderMap[target])tabRenderMap[target]()})});
+
+// ========== CHART.JS DEFAULTS ==========
+Chart.defaults.color='#8b949e';Chart.defaults.borderColor='#30363d';Chart.defaults.font.family="'General Sans',system-ui,sans-serif";
+let chartInstances={};
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
+
+// ========== EMBEDDED DATA ==========
+const M12=['Apr 25','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan 26','Feb','Mar'];
+const trendsCore={'Shark vacuum':[62,58,55,52,60,65,72,78,100,68,60,58],'Ninja air fryer':[55,50,48,45,52,58,65,75,100,62,55,50],'Ninja blender':[40,38,35,33,38,42,48,55,68,45,40,38],'SharkNinja':[25,22,20,18,22,25,30,38,55,42,35,28]};
+const trendsNew={'Ninja Creami':[85,78,72,68,75,82,88,92,100,80,72,65],'Ninja Luxe Cafe':[10,15,25,40,55,65,72,78,88,82,78,75],'Shark FlexStyle':[65,60,58,55,60,65,70,75,85,68,62,58],'Shark CryoGlow':[5,8,12,20,35,48,58,65,80,72,68,65],'Ninja Detect Pro':[30,28,25,22,28,35,42,48,55,42,38,35]};
+const trendsLeg={'Ninja blender':[40,38,35,33,38,42,48,55,68,45,40,38],'Shark Navigator':[35,32,30,28,32,35,40,45,55,38,35,32]};
+const socialData=[120,135,150,180,210,245,280,310,350,320,290,275];
+const patentD={l:['Q1 24','Q2 24','Q3 24','Q4 24','Q1 25','Q2 25','Q3 25','Q4 25'],c:[180,195,210,225,240,255,270,285],k:[150,165,180,198,215,232,250,268],b:[20,28,38,50,65,82,100,120],o:[50,55,60,68,75,82,90,98]};
+const consD={m:M12,u:[67.4,65.8,64.2,63.5,64.8,66.2,67.5,68.1,67.8,66.4,65.2,64.7],h:[4.02,4.10,4.15,4.08,4.12,4.18,4.22,4.15,4.08,4.05,4.10,4.12]};
+const aBSR={l:M12,'Air Fryer':[3,2,2,1,1,1,1,1,1,2,1,1],'Creami':[5,4,3,2,2,1,1,1,1,3,4,5],'Navigator':[4,3,3,2,2,2,2,2,1,2,3,3],'FlexStyle':[8,6,5,4,3,3,2,2,2,3,3,4]};
+const aPrice={l:M12,'Air Fryer':[99,99,89,99,99,99,89,79,89,99,99,99],'Creami':[199,199,199,179,199,199,179,169,179,199,199,199],'FlexStyle':[299,299,299,279,299,299,279,259,269,299,299,299]};
+let qData=null;
+
+// ========== LIVE DATA ==========
+async function initLiveData(){
+  try{
+    const[lR,qR]=await Promise.all([fetch('data/live-data.json').catch(()=>null),fetch('data/quarterly.json').catch(()=>null)]);
+    if(qR&&qR.ok){qData=await qR.json();renderQuarterlyTables()}
+    if(lR&&lR.ok){
+      const d=await lR.json();window.liveData=d;
+      const sn=d.stocks?.SN;
+      if(sn){
+        const p=sn.price,prev=sn.prevClose||sn.closes?.[sn.closes.length-2];
+        document.getElementById('live-price').textContent=`$${p.toFixed(2)}`;
+        if(prev){const c=p-prev,pct=(c/prev*100).toFixed(2),el=document.getElementById('live-change');el.textContent=`${c>=0?'+':''}${c.toFixed(2)} (${c>=0?'+':''}${pct}%)`;el.className=`stock-change ${c>=0?'up':'down'}`}
+        document.getElementById('live-mcap').textContent=`$${(p*141/1000).toFixed(1)}B`;
+      }
+      if(d.fx?.USDCNY)document.getElementById('fx-usdcny').textContent=d.fx.USDCNY.toFixed(4);
+      if(d.updated_at)document.getElementById('last-updated').textContent=`Data: ${new Date(d.updated_at).toLocaleString()}`;
+    }else{document.getElementById('last-updated').textContent='Run: python scripts/fetch_data.py'}
+  }catch(e){console.warn('Data load failed:',e);document.getElementById('last-updated').textContent='Data load failed'}
+  calculateCompositeScore();
+}
+
+function renderQuarterlyTables(){
+  if(!qData)return;
+  // Consensus
+  if(qData.consensus){const c=qData.consensus;let h='<table class="data-table"><thead><tr>';c.headers.forEach(x=>{h+=`<th>${x}</th>`});h+='</tr></thead><tbody>';c.rows.forEach(r=>{h+='<tr>';r.forEach((cell,i)=>{h+=`<td class="${i>0&&cell.startsWith('+')?'positive':''}">${cell}</td>`});h+='</tr>'});h+='</tbody></table>';document.getElementById('consensus-table-container').innerHTML=h}
+  // Analysts
+  if(qData.analyst_targets){let h='<table class="data-table"><thead><tr><th>Firm</th><th>Rating</th><th>PT</th><th>Multiple</th><th>Thesis</th></tr></thead><tbody>';qData.analyst_targets.forEach(a=>{h+=`<tr><td><strong>${a.firm}</strong></td><td><span class="${a.rating==='Buy'?'tone-green':'tone-amber'}">${a.rating}</span></td><td>$${a.pt}</td><td>${a.multiple}</td><td style="white-space:normal;max-width:300px">${a.thesis}</td></tr>`});h+='</tbody></table>';document.getElementById('analyst-table-container').innerHTML=h}
+  // Timeline
+  if(qData.key_dates){let h='';[...qData.key_dates].sort((a,b)=>a.date.localeCompare(b.date)).forEach(d=>{h+=`<div class="timeline-item type-${d.type}"><div class="timeline-date">${d.date}</div><div class="timeline-content">${d.event}</div></div>`});document.getElementById('timeline-container').innerHTML=h}
+  // Retailer commentary
+  if(qData.retailer_commentary){let h='<table class="data-table"><thead><tr><th>Retailer</th><th>Date</th><th>Commentary</th><th>Tone</th></tr></thead><tbody>';qData.retailer_commentary.forEach(r=>{h+=`<tr><td><strong>${r.retailer}</strong></td><td>${r.date}</td><td style="white-space:normal;max-width:400px">${r.comment}</td><td><span class="tone-${r.tone}">${r.tone.toUpperCase()}</span></td></tr>`});h+='</tbody></table>';document.getElementById('retailer-commentary-container').innerHTML=h}
+  // Supply chain
+  if(qData.supply_chain_diversification){let h='<h3 style="font-family:var(--font-heading);margin-bottom:16px">Manufacturing by Country</h3>';qData.supply_chain_diversification.forEach(s=>{const c=s.country==='China'?'var(--amber)':'var(--accent)';h+=`<div class="progress-bar-container"><div class="progress-bar-label"><span>${s.country} — ${s.status}</span><span>${s.pct_production}%</span></div><div class="progress-bar"><div class="fill" style="width:${s.pct_production}%;background:${c}"></div></div></div>`});document.getElementById('supply-chain-bars').innerHTML=h}
+  // Tripwires
+  if(qData.tripwires){const tw=qData.tripwires;const rows=[{n:1,t:'Domestic revenue growth',c:tw.domestic_growth.current+'%',th:'<'+tw.domestic_growth.threshold+'% for 2Q',s:tw.domestic_growth.status},{n:2,t:'Adj. gross margin',c:tw.adj_gross_margin.current+'%',th:'<'+tw.adj_gross_margin.threshold+'%',s:tw.adj_gross_margin.status},{n:3,t:'Inventory/COGS ratio',c:tw.inventory_cogs.current+'%',th:'>'+tw.inventory_cogs.threshold+'%',s:tw.inventory_cogs.status},{n:4,t:'International growth',c:tw.international_growth.current+'%',th:'<'+tw.international_growth.threshold+'% before 50% share',s:tw.international_growth.status},{n:5,t:'SG&A % expanding',c:tw.sga_expanding.current_sga_pct+'%',th:'Expanding while rev decelerates',s:tw.sga_expanding.status},{n:6,t:'New product virality',c:tw.viral_cycles_active.count+' active',th:'<'+tw.viral_cycles_active.threshold+' for 2+ Q',s:tw.viral_cycles_active.status},{n:7,t:'Tariff rate escalation',c:tw.tariff_rate.current+'%',th:'>'+tw.tariff_rate.threshold+'%',s:tw.tariff_rate.status},{n:8,t:'Inv growth vs rev growth',c:`Inv ${tw.inventory_vs_revenue_growth.inv_growth}% vs Rev ${tw.inventory_vs_revenue_growth.rev_growth}%`,th:'Inv > Rev for 2+ Q',s:tw.inventory_vs_revenue_growth.status},{n:9,t:'FCF vs buyback',c:`FCF $${tw.fcf_vs_buyback.ttm_fcf}M`,th:`FCF < $${tw.fcf_vs_buyback.annual_buyback}M`,s:tw.fcf_vs_buyback.status},{n:10,t:'Amazon BSR core cats',c:tw.amazon_bsr.core_categories_top5?'Top 5':'Declining',th:'Falling out of top 20',s:tw.amazon_bsr.status}];
+  let h='<table class="data-table"><thead><tr><th>#</th><th>Tripwire</th><th>Current</th><th>Threshold</th><th>Status</th></tr></thead><tbody>';rows.forEach(r=>{h+=`<tr><td>${r.n}</td><td>${r.t}</td><td>${r.c}</td><td>${r.th}</td><td><span class="status-dot ${r.s}"></span>${r.s.toUpperCase()}</td></tr>`});h+='</tbody></table>';document.getElementById('tripwire-table-container').innerHTML=h}
+}
+
+// ========== SCORING ENGINE ==========
+function calculateCompositeScore(){
+  const vc=qData?.tripwires?.viral_cycles_active?.count||2,viralS=Math.min(100,vc*33);
+  const avgT=trendsCore['Shark vacuum'][11],cciV=consD.u[11],demandS=Math.min(100,avgT*.5+((cciV-50)/30)*50);
+  const invR=qData?.tripwires?.inventory_cogs?.current||27.5,invS=Math.min(100,Math.max(0,(35-invR)/10*100));
+  const tarR=qData?.tripwires?.tariff_rate?.current||20,tarS=Math.min(100,Math.max(0,(30-tarR)/15*100));
+  const intG=qData?.tripwires?.international_growth?.current||21.4,intS=Math.min(100,Math.max(0,intG/25*100));
+  const comp=Math.round(viralS*.25+demandS*.25+invS*.2+tarS*.15+intS*.15);
+  const lbl=comp>70?'STRONG':comp>40?'NEUTRAL':'WEAK',cls=comp>70?'signal-strong':comp>40?'signal-neutral':'signal-weak';
+  const sig=document.getElementById('composite-signal');sig.textContent=`COMPOSITE: ${comp} — ${lbl}`;sig.className=`signal-badge ${cls}`;
+  updateRing('demand-score-ring','demand-score-num',demandS,50);
+  updateRing('composite-ring','composite-score-num',comp,68);
+  const bd=document.getElementById('score-breakdown-table');
+  if(bd)bd.innerHTML=`<h3 style="font-family:var(--font-heading);margin-bottom:12px">Score Components</h3><table class="data-table"><thead><tr><th>Component</th><th>Weight</th><th>Score</th><th>Wtd</th><th>Tab</th></tr></thead><tbody><tr><td>Viral Cycle</td><td>25%</td><td>${viralS}</td><td>${(viralS*.25)|0}</td><td>02</td></tr><tr><td>Sell-Through</td><td>25%</td><td>${demandS|0}</td><td>${(demandS*.25)|0}</td><td>03</td></tr><tr><td>Inventory</td><td>20%</td><td>${invS|0}</td><td>${(invS*.2)|0}</td><td>04</td></tr><tr><td>Tariff & Cost</td><td>15%</td><td>${tarS|0}</td><td>${(tarS*.15)|0}</td><td>05</td></tr><tr><td>International</td><td>15%</td><td>${intS|0}</td><td>${(intS*.15)|0}</td><td>06</td></tr><tr style="font-weight:700;border-top:2px solid var(--border)"><td>COMPOSITE</td><td>100%</td><td colspan="2">${comp} — ${lbl}</td><td></td></tr></tbody></table>`;
+  return comp;
+}
+function updateRing(rId,nId,score,r){const c=2*Math.PI*r,el=document.getElementById(rId),n=document.getElementById(nId);if(el){el.style.strokeDasharray=c;el.style.strokeDashoffset=c-(score/100)*c;el.style.stroke=score>70?'var(--green)':score>40?'var(--amber)':'var(--red)'}if(n)n.textContent=Math.round(score)}
+
+// ========== CHART RENDERS ==========
+function renderSN101Charts(){
+  destroyChart('chart-segment');
+  chartInstances['chart-segment']=new Chart(document.getElementById('chart-segment'),{type:'doughnut',data:{labels:['Cleaning & Org','Cooking & Bev','Food Prep','Beauty','Other'],datasets:[{data:[35,30,20,12,3],backgroundColor:['#0077C8','#00B4D8','#2dd4bf','#f85149','#8b949e'],borderColor:'#1c2128',borderWidth:2}]},options:{responsive:true,plugins:{legend:{position:'bottom'},title:{display:true,text:'Revenue by Category (FY25)',color:'#e6edf3'}}}});
+  destroyChart('chart-geo');
+  chartInstances['chart-geo']=new Chart(document.getElementById('chart-geo'),{type:'bar',data:{labels:['Domestic','International'],datasets:[{label:'FY2023',data:[3200,1350],backgroundColor:'rgba(0,119,200,.3)'},{label:'FY2024',data:[3600,1932],backgroundColor:'rgba(0,119,200,.5)'},{label:'FY2025',data:[4300,2099],backgroundColor:'rgba(0,119,200,.8)'}]},options:{responsive:true,indexAxis:'y',plugins:{title:{display:true,text:'Revenue by Geography ($M)',color:'#e6edf3'}},scales:{x:{grid:{color:'#30363d'}},y:{grid:{display:false}}}}});
+}
+
+function renderViralCharts(){
+  destroyChart('chart-lifecycle');
+  const c5=['#0077C8','#00B4D8','#2dd4bf','#f85149','#d29922'],ns=Object.keys(trendsNew);
+  chartInstances['chart-lifecycle']=new Chart(document.getElementById('chart-lifecycle'),{type:'line',data:{labels:M12,datasets:ns.map((n,i)=>({label:n,data:trendsNew[n],borderColor:c5[i],tension:.3,pointRadius:2,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Product Lifecycle Curves — Google Trends (0-100)',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'},min:0,max:100},x:{grid:{color:'#30363d'}}}}});
+  destroyChart('chart-social');
+  chartInstances['chart-social']=new Chart(document.getElementById('chart-social'),{type:'bar',data:{labels:M12,datasets:[{label:'Social Mentions',data:socialData,backgroundColor:'rgba(0,119,200,.5)',borderColor:'#0077C8',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Social Mention Velocity (Monthly)',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'}},x:{grid:{color:'#30363d'}}}}});
+  destroyChart('chart-patents');
+  chartInstances['chart-patents']=new Chart(document.getElementById('chart-patents'),{type:'line',data:{labels:patentD.l,datasets:[{label:'Cleaning',data:patentD.c,borderColor:'#0077C8',tension:.3},{label:'Cooking',data:patentD.k,borderColor:'#00B4D8',tension:.3},{label:'Beauty',data:patentD.b,borderColor:'#f85149',tension:.3},{label:'Other/New',data:patentD.o,borderColor:'#d29922',tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Cumulative Patent Filings by Category',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'}},x:{grid:{color:'#30363d'}}}}});
+}
+
+function renderSellThroughCharts(){
+  destroyChart('chart-trends-core');
+  const cn=Object.keys(trendsCore),cc=['#0077C8','#00B4D8','#2dd4bf','#d29922'];
+  chartInstances['chart-trends-core']=new Chart(document.getElementById('chart-trends-core'),{type:'line',data:{labels:M12,datasets:cn.map((n,i)=>({label:n,data:trendsCore[n],borderColor:cc[i],tension:.3,pointRadius:2,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Google Trends — Core Brands (12M)',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'},min:0,max:100},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-trends-new-legacy');
+  const nn=Object.keys(trendsNew),ln=Object.keys(trendsLeg),an=[...nn,...ln],ad=[...Object.values(trendsNew),...Object.values(trendsLeg)],ac=['#0077C8','#00B4D8','#2dd4bf','#f85149','#d29922','#8b949e','#6e7681'];
+  chartInstances['chart-trends-new-legacy']=new Chart(document.getElementById('chart-trends-new-legacy'),{type:'line',data:{labels:M12,datasets:an.map((n,i)=>({label:n,data:ad[i],borderColor:ac[i],tension:.3,pointRadius:2,borderWidth:i<nn.length?2:1,borderDash:i>=nn.length?[5,5]:[]}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'New Products (solid) vs Legacy (dashed)',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'},min:0,max:100},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-amazon-bsr');
+  const bn=Object.keys(aBSR).filter(k=>k!=='l'),bc=['#0077C8','#00B4D8','#2dd4bf','#f85149'];
+  chartInstances['chart-amazon-bsr']=new Chart(document.getElementById('chart-amazon-bsr'),{type:'line',data:{labels:aBSR.l,datasets:bn.map((n,i)=>({label:n,data:aBSR[n],borderColor:bc[i],tension:.3,pointRadius:3,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},reverse:true,title:{display:true,text:'BSR (lower=better)'},min:0},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-amazon-pricing');
+  const pn=Object.keys(aPrice).filter(k=>k!=='l');
+  chartInstances['chart-amazon-pricing']=new Chart(document.getElementById('chart-amazon-pricing'),{type:'line',data:{labels:aPrice.l,datasets:pn.map((n,i)=>({label:n,data:aPrice[n],borderColor:bc[i],tension:.3,pointRadius:3,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},title:{display:true,text:'Price ($)'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-consumer-health');
+  chartInstances['chart-consumer-health']=new Chart(document.getElementById('chart-consumer-health'),{type:'line',data:{labels:consD.m,datasets:[{label:'U. Michigan Sentiment',data:consD.u,borderColor:'#0077C8',tension:.3,yAxisID:'y'},{label:'Existing Home Sales (M)',data:consD.h,borderColor:'#d29922',tension:.3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Consumer Health — Sentiment & Housing',color:'#e6edf3'}},scales:{y:{position:'left',grid:{color:'#30363d'},title:{display:true,text:'UMCSENT'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'Home Sales (M)'}},x:{grid:{color:'#30363d'}}}}});
+}
+
+function renderInventoryCharts(){
+  if(!qData)return;
+  const Q=qData.quarterly_data.map(q=>q.period),IC=qData.quarterly_data.map(q=>q.inventory_cogs_ratio);
+  destroyChart('chart-inv-cogs');
+  chartInstances['chart-inv-cogs']=new Chart(document.getElementById('chart-inv-cogs'),{type:'bar',data:{labels:Q,datasets:[{label:'Inv/COGS %',data:IC,backgroundColor:IC.map(v=>v>35?'rgba(248,81,73,.6)':v>32?'rgba(210,153,34,.6)':'rgba(0,119,200,.6)')}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},title:{display:true,text:'%'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-inv-vs-rev');
+  const IG=qData.quarterly_data.map((q,i)=>{if(i<4)return null;const p=qData.quarterly_data[i-4];return p?+((q.inventory-p.inventory)/p.inventory*100).toFixed(1):null});
+  const RG=qData.quarterly_data.map(q=>+(q.domestic_growth_pct*.67+q.international_growth_pct*.33).toFixed(1));
+  chartInstances['chart-inv-vs-rev']=new Chart(document.getElementById('chart-inv-vs-rev'),{type:'bar',data:{labels:Q,datasets:[{label:'Inv Growth YoY %',data:IG,backgroundColor:'rgba(248,81,73,.5)'},{label:'Rev Growth %',data:RG,backgroundColor:'rgba(0,119,200,.5)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},title:{display:true,text:'%'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-margin-bridge');
+  if(qData.margin_bridge){const mb=qData.margin_bridge,labels=['FY24 GM','Tariff','Pricing','Mix','COGS Eff.','FX','FY25 GM'],vals=[mb.prior_year_gm,mb.tariff_impact,mb.pricing,mb.mix_shift,mb.cogs_efficiency,mb.fx,mb.current_gm];
+  let run=0;const base=[],pos=[],neg=[],tot=[];
+  vals.forEach((v,i)=>{if(i===0||i===vals.length-1){base.push(0);pos.push(0);neg.push(0);tot.push(v)}else{base.push(run+vals[0]);pos.push(v>0?v:0);neg.push(v<0?Math.abs(v):0);tot.push(0);run+=v}});
+  chartInstances['chart-margin-bridge']=new Chart(document.getElementById('chart-margin-bridge'),{type:'bar',data:{labels,datasets:[{label:'Base',data:base,backgroundColor:'transparent'},{label:'Positive',data:pos,backgroundColor:'rgba(63,185,80,.6)'},{label:'Negative',data:neg,backgroundColor:'rgba(248,81,73,.6)'},{label:'Total',data:tot,backgroundColor:'rgba(0,119,200,.6)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Gross Margin Bridge FY24→FY25 (%)',color:'#e6edf3'}},scales:{x:{stacked:true,grid:{color:'#30363d'}},y:{stacked:true,grid:{color:'#30363d'},min:45,max:52}}}})}
+
+  destroyChart('chart-deal-freq');
+  chartInstances['chart-deal-freq']=new Chart(document.getElementById('chart-deal-freq'),{type:'line',data:{labels:M12,datasets:[{label:'% SKUs on Deal',data:[8,7,6,5,8,10,15,22,28,12,8,7],borderColor:'#d29922',tension:.3,fill:true,backgroundColor:'rgba(210,153,34,.1)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-channel-mix');
+  chartInstances['chart-channel-mix']=new Chart(document.getElementById('chart-channel-mix'),{type:'line',data:{labels:Q,datasets:[{label:'Wholesale',data:[72,71,70,68,70,69,68,66],borderColor:'#0077C8',backgroundColor:'rgba(0,119,200,.15)',fill:true,tension:.3},{label:'Amazon',data:[20,21,21,22,21,22,22,23],borderColor:'#d29922',backgroundColor:'rgba(210,153,34,.15)',fill:true,tension:.3},{label:'DTC',data:[8,8,9,10,9,9,10,11],borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,.15)',fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},stacked:true},x:{grid:{color:'#30363d'}}}}});
+}
+
+function renderTariffCharts(){
+  destroyChart('chart-shipping');
+  chartInstances['chart-shipping']=new Chart(document.getElementById('chart-shipping'),{type:'line',data:{labels:M12,datasets:[{label:'FBX China-US ($/FEU)',data:[2800,2650,2500,2400,2600,3200,3800,4200,3600,3100,2800,2600],borderColor:'#0077C8',tension:.3,fill:true,backgroundColor:'rgba(0,119,200,.1)'}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},title:{display:true,text:'$/FEU'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-usdcny');
+  const fx=window.liveData?.stocks?.['CNY=X']?.closes||[7.24,7.22,7.20,7.18,7.21,7.23,7.25,7.22,7.20,7.18,7.22,7.25];
+  chartInstances['chart-usdcny']=new Chart(document.getElementById('chart-usdcny'),{type:'line',data:{labels:M12,datasets:[{label:'USD/CNY',data:fx.length>12?fx.slice(-12):fx,borderColor:'#00B4D8',tension:.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-commodities');
+  chartInstances['chart-commodities']=new Chart(document.getElementById('chart-commodities'),{type:'line',data:{labels:M12,datasets:[{label:'Copper ($/lb)',data:[4.10,4.05,3.98,4.02,4.15,4.22,4.30,4.18,4.10,4.05,4.12,4.20],borderColor:'#d29922',tension:.3,yAxisID:'y'},{label:'Crude Oil ($/bbl)',data:[72,70,68,65,68,72,75,73,70,68,71,74],borderColor:'#f85149',tension:.3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Commodity Input Costs',color:'#e6edf3'}},scales:{y:{position:'left',grid:{color:'#30363d'},title:{display:true,text:'Copper'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'Crude'}},x:{grid:{color:'#30363d'}}}}});
+}
+
+function renderInternationalCharts(){
+  if(!qData)return;
+  const Q=qData.quarterly_data.map(q=>q.period),IP=qData.quarterly_data.map(q=>(q.revenue_international/q.revenue_total*100).toFixed(1)),IG=qData.quarterly_data.map(q=>q.international_growth_pct),DG=qData.quarterly_data.map(q=>q.domestic_growth_pct);
+
+  destroyChart('chart-intl-share');
+  chartInstances['chart-intl-share']=new Chart(document.getElementById('chart-intl-share'),{type:'line',data:{labels:Q,datasets:[{label:'Intl Share %',data:IP,borderColor:'#0077C8',backgroundColor:'rgba(0,119,200,.15)',fill:true,tension:.3,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},min:25,max:55},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-intl-vs-domestic');
+  chartInstances['chart-intl-vs-domestic']=new Chart(document.getElementById('chart-intl-vs-domestic'),{type:'line',data:{labels:Q,datasets:[{label:'Intl Growth %',data:IG,borderColor:'#0077C8',tension:.3,borderWidth:3,pointRadius:4},{label:'Domestic Growth %',data:DG,borderColor:'#d29922',tension:.3,borderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#30363d'},title:{display:true,text:'YoY %'}},x:{grid:{color:'#30363d'}}}}});
+
+  destroyChart('chart-intl-trends');
+  const it={'Ninja UK':[55,52,50,48,52,58,65,72,85,62,55,52],'Shark UK':[42,40,38,35,40,45,52,60,75,50,42,40],'Ninja DE':[15,16,18,20,22,25,28,32,38,30,25,22],'Ninja FR':[10,12,14,16,18,20,22,25,30,22,18,15],'Ninja AU':[20,22,24,25,28,30,32,35,42,32,28,25]},ic=['#0077C8','#00B4D8','#2dd4bf','#d29922','#f85149'];
+  chartInstances['chart-intl-trends']=new Chart(document.getElementById('chart-intl-trends'),{type:'line',data:{labels:M12,datasets:Object.keys(it).map((n,i)=>({label:n,data:it[n],borderColor:ic[i],tension:.3,pointRadius:2,borderWidth:2}))},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Google Trends by Market (12M)',color:'#e6edf3'}},scales:{y:{grid:{color:'#30363d'},min:0,max:100},x:{grid:{color:'#30363d'}}}}});
+}
+
+function renderThesisCharts(){calculateCompositeScore()}
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded',async()=>{renderSN101Charts();await initLiveData()});
+</script>
+</body>
+</html>

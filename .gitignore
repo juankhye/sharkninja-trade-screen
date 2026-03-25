@@ -1,0 +1,30 @@
+# Research documents (keep local, don't push)
+*.pdf
+*.PDF
+*.docx
+*.DOCX
+*.xlsx
+*.XLSX
+Archive Model/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code
+.claude/
+
+# Cached trend data (intermediate files)
+data/trends/
+data/keepa/
+data/fetch_log.json
+
+# SN Consolidated docs
+SN_*.docx
